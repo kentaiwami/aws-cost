@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: aws-cost
+  namespace: aws-cost
+spec:
+  schedule: "0 0 * * *"  # 毎日 09:00 JST (UTC 00:00)
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: aws-cost
+              image: __REGISTRY_HOST__:5000/aws-cost:__IMAGE_TAG__
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 64Mi
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-cost-secret
+                      key: aws-access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-cost-secret
+                      key: aws-secret-access-key
+                - name: AWS_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-cost-secret
+                      key: aws-region
+                - name: SLACK_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-cost-secret
+                      key: slack-webhook-url
