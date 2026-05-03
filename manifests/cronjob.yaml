@@ -4,7 +4,7 @@ metadata:
   name: aws-cost
   namespace: aws-cost
 spec:
-  schedule: "0 0 * * *"  # 毎日 09:00 JST (UTC 00:00)
+  schedule: "* * * * *"  # 毎日 09:00 JST (UTC 00:00)
   jobTemplate:
     spec:
       template:
