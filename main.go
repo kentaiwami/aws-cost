@@ -39,41 +39,25 @@ func main() {
 	jst := time.FixedZone("JST", 9*60*60)
 	now := time.Now().In(jst)
 	today := now.Format("2006-01-02")
-	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
 	monthStart := now.Format("2006-01") + "-01"
-
-	// 昨日のコスト
-	yesterdayResp, err := ce.GetCostAndUsage(ctx, &costexplorer.GetCostAndUsageInput{
-		TimePeriod: &types.DateInterval{Start: aws.String(yesterday), End: aws.String(today)},
-		Granularity: types.GranularityDaily,
-		Metrics:    []string{"UnblendedCost"},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// 今月累計
 	monthResp, err := ce.GetCostAndUsage(ctx, &costexplorer.GetCostAndUsageInput{
-		TimePeriod: &types.DateInterval{Start: aws.String(monthStart), End: aws.String(today)},
+		TimePeriod:  &types.DateInterval{Start: aws.String(monthStart), End: aws.String(today)},
 		Granularity: types.GranularityMonthly,
-		Metrics:    []string{"UnblendedCost"},
+		Metrics:     []string{"UnblendedCost"},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	yesterdayCost := "0.00"
-	if len(yesterdayResp.ResultsByTime) > 0 {
-		yesterdayCost = *yesterdayResp.ResultsByTime[0].Total["UnblendedCost"].Amount
-	}
 	monthCost := "0.00"
 	if len(monthResp.ResultsByTime) > 0 {
 		monthCost = *monthResp.ResultsByTime[0].Total["UnblendedCost"].Amount
 	}
 
-	yesterday_f, _ := strconv.ParseFloat(yesterdayCost, 64)
 	month_f, _ := strconv.ParseFloat(monthCost, 64)
-	msg := fmt.Sprintf("💰 AWS Cost Report (%s)\n昨日: $%.2f\n今月累計: $%.2f", yesterday, yesterday_f, month_f)
+	msg := fmt.Sprintf("💰 AWS Cost Report\n今月累計: $%.2f", month_f)
 	if err := postSlack(webhookURL, msg); err != nil {
 		log.Fatal(err)
 	}
