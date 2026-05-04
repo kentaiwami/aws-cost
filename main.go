@@ -36,7 +36,8 @@ func main() {
 	}
 	ce := costexplorer.NewFromConfig(cfg)
 
-	now := time.Now().UTC()
+	jst := time.FixedZone("JST", 9*60*60)
+	now := time.Now().In(jst)
 	today := now.Format("2006-01-02")
 	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
 	monthStart := now.Format("2006-01") + "-01"
