@@ -21,8 +21,6 @@ spec:
                   cpu: 200m
                   memory: 64Mi
               env:
-                - name: GODEBUG
-                  value: "netdns=go"
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
