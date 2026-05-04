@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -46,18 +48,35 @@ func main() {
 		TimePeriod:  &types.DateInterval{Start: aws.String(monthStart), End: aws.String(today)},
 		Granularity: types.GranularityMonthly,
 		Metrics:     []string{"UnblendedCost"},
+		GroupBy: []types.GroupDefinition{
+			{Type: types.GroupDefinitionTypeDimension, Key: aws.String("SERVICE")},
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	monthCost := "0.00"
-	if len(monthResp.ResultsByTime) > 0 {
-		monthCost = *monthResp.ResultsByTime[0].Total["UnblendedCost"].Amount
+	var total float64
+	type entry struct {
+		name   string
+		amount float64
 	}
-
-	month_f, _ := strconv.ParseFloat(monthCost, 64)
-	msg := fmt.Sprintf("💰 AWS Cost Report\n今月累計: $%.2f", month_f)
+	var entries []entry
+	if len(monthResp.ResultsByTime) > 0 {
+		for _, group := range monthResp.ResultsByTime[0].Groups {
+			amount, _ := strconv.ParseFloat(*group.Metrics["UnblendedCost"].Amount, 64)
+			if amount > 0 {
+				total += amount
+				entries = append(entries, entry{group.Keys[0], amount})
+			}
+		}
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].amount > entries[j].amount })
+	var lines []string
+	for _, e := range entries {
+		lines = append(lines, fmt.Sprintf("  %s: $%.2f", e.name, e.amount))
+	}
+	msg := fmt.Sprintf("💰 AWS Cost Report\n今月累計: $%.2f\n%s", total, strings.Join(lines, "\n"))
 	if err := postSlack(webhookURL, msg); err != nil {
 		log.Fatal(err)
 	}
