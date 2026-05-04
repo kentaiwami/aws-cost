@@ -27,7 +27,10 @@ func main() {
 	}
 
 	ctx := context.Background()
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRetryMaxAttempts(10),
+		config.WithRetryMode(aws.RetryModeAdaptive),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
