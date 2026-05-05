@@ -41,3 +41,8 @@ spec:
                     secretKeyRef:
                       name: aws-cost-secret
                       key: slack-webhook-url
+                - name: MYSQL_DSN
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-cost-secret
+                      key: mysql-dsn

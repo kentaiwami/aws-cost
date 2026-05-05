@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/costexplorer"
 	"github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
 
@@ -27,6 +29,16 @@ func main() {
 	if webhookURL == "" {
 		log.Fatal("SLACK_WEBHOOK_URL is required")
 	}
+	dsn := os.Getenv("MYSQL_DSN")
+	if dsn == "" {
+		log.Fatal("MYSQL_DSN is required")
+	}
+
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx,
@@ -72,11 +84,37 @@ func main() {
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].amount > entries[j].amount })
+
+	// 前回値を取得して差分計算
+	var prevTotal float64
+	var prevDate string
+	row := db.QueryRow(`SELECT date, total FROM aws_cost_history ORDER BY date DESC LIMIT 1`)
+	if err := row.Scan(&prevDate, &prevTotal); err != nil && err != sql.ErrNoRows {
+		log.Fatal(err)
+	}
+
+	// 今回値を保存（同日は上書き）
+	if _, err := db.Exec(`INSERT INTO aws_cost_history (date, total) VALUES (?, ?) ON DUPLICATE KEY UPDATE total = VALUES(total)`,
+		today, total); err != nil {
+		log.Fatal(err)
+	}
+
 	var lines []string
 	for _, e := range entries {
 		lines = append(lines, fmt.Sprintf("  %s: $%.2f", e.name, e.amount))
 	}
-	msg := fmt.Sprintf("💰 AWS Cost Report\n今月累計: $%.2f\n%s", total, strings.Join(lines, "\n"))
+
+	diffStr := "N/A"
+	if prevDate != "" && prevDate != today {
+		diff := total - prevTotal
+		sign := "+"
+		if diff < 0 {
+			sign = ""
+		}
+		diffStr = fmt.Sprintf("%s$%.2f (前回: %s)", sign, diff, prevDate)
+	}
+
+	msg := fmt.Sprintf("💰 AWS Cost Report\n今月累計: $%.2f\n前日差分: %s\n%s", total, diffStr, strings.Join(lines, "\n"))
 	if err := postSlack(webhookURL, msg); err != nil {
 		log.Fatal(err)
 	}
