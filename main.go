@@ -88,7 +88,7 @@ func main() {
 	// 前回値を取得して差分計算
 	var prevTotal float64
 	var prevDate string
-	row := db.QueryRow(`SELECT date, total FROM aws_cost_history ORDER BY date DESC LIMIT 1`)
+	row := db.QueryRow(`SELECT DATE_FORMAT(date, '%Y-%m-%d'), total FROM aws_cost_history ORDER BY date DESC LIMIT 1`)
 	if err := row.Scan(&prevDate, &prevTotal); err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
 	}
