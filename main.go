@@ -77,6 +77,7 @@ func main() {
 	if len(monthResp.ResultsByTime) > 0 {
 		for _, group := range monthResp.ResultsByTime[0].Groups {
 			amount, _ := strconv.ParseFloat(*group.Metrics["UnblendedCost"].Amount, 64)
+			log.Printf("service: %s, amount: %.4f", group.Keys[0], amount)
 			if amount > 0 {
 				total += amount
 				entries = append(entries, entry{group.Keys[0], amount})
