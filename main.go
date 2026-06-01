@@ -54,6 +54,10 @@ func main() {
 	now := time.Now().In(jst)
 	today := now.Format("2006-01-02")
 	monthStart := now.Format("2006-01") + "-01"
+	if monthStart == today {
+		// 月初はStart==Endになるため、前月末日をStartにする
+		monthStart = now.AddDate(0, 0, -1).Format("2006-01-02")
+	}
 
 	// 今月累計
 	monthResp, err := ce.GetCostAndUsage(ctx, &costexplorer.GetCostAndUsageInput{
